@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zone Ledger — Free Fire Tournament Hub</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="brand"><span class="flame">▲</span> ZONE LEDGER</div>
+  <nav class="site-nav">
+    <a href="index.html" class="active">Tournaments</a>
+    <a href="admin.html">Admin</a>
+  </nav>
+</header>
+
+<section class="hero container">
+  <div class="eyebrow">Live room management</div>
+  <h1>Book a slot before<br>the zone closes.</h1>
+  <p class="lead">Every match here runs as a real custom room — 1v1 duels, 2v2 and 4v4 squads, or a full 48-player free-for-all. Room ID and password drop right before start.</p>
+</section>
+
+<main class="container">
+  <div class="tab-bar" id="filter-bar">
+    <button class="tab-btn active" data-mode="all">All</button>
+    <button class="tab-btn" data-mode="solo">1 vs 1</button>
+    <button class="tab-btn" data-mode="duo">2 vs 2</button>
+    <button class="tab-btn" data-mode="squad">4 vs 4</button>
+    <button class="tab-btn" data-mode="custom">Custom 48</button>
+  </div>
+
+  <div id="tournament-grid" class="grid">
+    <!-- populated by js/home.js -->
+  </div>
+
+  <div id="empty-state" class="empty-state" style="display:none;">
+    <div class="glyph">▦</div>
+    <p>No tournaments here yet. Check back soon, or ask an admin to open a room.</p>
+  </div>
+</main>
+
+<footer class="site-footer">Zone Ledger — built for Free Fire custom-room tournaments.</footer>
+
+<script type="module" src="js/home.js"></script>
+</body>
+</html>

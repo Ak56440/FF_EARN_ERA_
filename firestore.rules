@@ -1,0 +1,62 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Anyone can read tournament info (so the site can list/display it).
+    // Only a signed-in admin (their UID exists in /admins) can create, edit, or delete.
+    match /tournaments/{tournamentId} {
+      allow read: if true;
+      allow create, delete: if isAdmin();
+      // Admins can change anything. A registering player is also allowed to
+      // bump slotsFilled by itself (and only upward, and never past capacity)
+      // so the "slots filled" counter can update without an admin in the loop.
+      allow update: if isAdmin() || isSlotIncrementOnly();
+
+      // Registrations: anyone can submit an entry (that's how players sign up).
+      // Only admins can edit/delete entries (e.g. to fix a mistake or remove a no-show).
+      // Players cannot read the full registration list directly (privacy for contact info) -
+      // the site reads aggregated slot counts from the parent tournament doc instead.
+      match /registrations/{regId} {
+        allow read: if isAdmin();
+        allow create: if isValidRegistration();
+        allow update, delete: if isAdmin();
+      }
+
+      // Results: public read (so players can see the leaderboard), admin-only write.
+      match /results/{resultId} {
+        allow read: if true;
+        allow create, update, delete: if isAdmin();
+      }
+    }
+
+    // Admin allow-list: a doc exists at /admins/{uid} for every admin account.
+    // Nobody can read/write this from the client; it's managed by you in the Firebase console.
+    match /admins/{uid} {
+      allow read, write: if false;
+    }
+
+    function isAdmin() {
+      return request.auth != null &&
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    function isSlotIncrementOnly() {
+      let before = resource.data;
+      let after = request.resource.data;
+      return after.diff(before).affectedKeys().hasOnly(['slotsFilled'])
+        && after.slotsFilled is int
+        && after.slotsFilled > before.slotsFilled
+        && after.slotsFilled <= before.maxSlots;
+    }
+
+    function isValidRegistration() {
+      // Basic shape check so the open "create" rule can't be abused to write junk data.
+      let d = request.resource.data;
+      return d.teamName is string && d.teamName.size() > 0 && d.teamName.size() < 60
+        && d.players is list && d.players.size() > 0 && d.players.size() <= 48
+        && d.contactNumber is string
+        && d.registeredAt == request.time;
+    }
+  }
+}

@@ -32,8 +32,9 @@ service cloud.firestore {
 
     // Admin allow-list: a doc exists at /admins/{uid} for every admin account.
     // Nobody can read/write this from the client; it's managed by you in the Firebase console.
-    match /admins/{uid} {
-      allow read, write: if false;
+   match /admins/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow write: if false;
     }
 
     function isAdmin() {

@@ -1,5 +1,9 @@
 // Shared constants and small helper functions used across every page.
 
+// UPI ID that receives entry-fee payments. Shown on the registration page
+// as text + a scannable QR code for tournaments that have an entry fee.
+export const UPI_ID = "8010147648@axl";
+
 export const MODES = {
   solo:   { label: "1 vs 1",  teamSize: 1, icon: "⬡" },
   duo:    { label: "2 vs 2",  teamSize: 2, icon: "⬡⬡" },

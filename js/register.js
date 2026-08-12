@@ -1,5 +1,5 @@
 import { db, doc, getDoc, collection, runTransaction, serverTimestamp } from "./firebase-init.js";
-import { modeLabel, teamSizeFor, escapeHtml } from "./utils.js";
+import { modeLabel, teamSizeFor, escapeHtml, UPI_ID } from "./utils.js";
 
 const root = document.getElementById("page-root");
 const id = new URLSearchParams(window.location.search).get("id");
@@ -26,11 +26,34 @@ async function load() {
 function renderForm(t) {
   const size = teamSizeFor(t);
   const remaining = (t.maxSlots || 48) - (t.slotsFilled || 0);
+  const hasFee = (t.entryFee || 0) > 0;
+  const upiLink = `upi://pay?pa=${encodeURIComponent(UPI_ID)}&pn=${encodeURIComponent("Zone Ledger")}&am=${t.entryFee}&cu=INR&tn=${encodeURIComponent(t.name)}`;
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(upiLink)}`;
 
   root.innerHTML = `
     <div class="eyebrow" style="font-family:var(--font-mono);color:var(--zone);font-size:0.8rem;">${modeLabel(t.mode)}</div>
     <h1>Register — ${escapeHtml(t.name)}</h1>
     <p class="lead">${remaining} of ${t.maxSlots || 48} player slots remaining.</p>
+
+    ${hasFee ? `
+    <div class="panel" style="margin-bottom:1.5rem;">
+      <h3 style="margin-top:0;">Pay entry fee — ₹${t.entryFee}</h3>
+      <p class="helper">Scan the QR or pay to the UPI ID below, then enter the transaction/reference ID from your payment app so we can confirm it.</p>
+      <div style="display:flex;gap:1.25rem;align-items:center;flex-wrap:wrap;">
+        <img src="${qrUrl}" alt="UPI QR code" width="160" height="160" style="border-radius:8px;background:#fff;padding:6px;">
+        <div>
+          <div class="field" style="margin-bottom:0.5rem;">
+            <label>UPI ID</label>
+            <div class="mono" style="font-size:1.05rem;">${escapeHtml(UPI_ID)}</div>
+          </div>
+          <div class="field" style="margin-bottom:0;">
+            <label>Amount</label>
+            <div class="mono" style="font-size:1.05rem;">₹${t.entryFee}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    ` : ""}
 
     <form id="reg-form">
       <div class="field">
@@ -41,6 +64,12 @@ function renderForm(t) {
         <label for="contact">Contact number (WhatsApp preferred)</label>
         <input id="contact" required maxlength="20" placeholder="e.g. 98765 43210">
       </div>
+      ${hasFee ? `
+      <div class="field">
+        <label for="upiTxnId">UPI transaction / reference ID</label>
+        <input id="upiTxnId" required maxlength="60" placeholder="e.g. 123456789012">
+      </div>
+      ` : ""}
 
       <div id="players"></div>
 
@@ -80,6 +109,9 @@ async function submit(e, t, size) {
 
   const teamName = document.getElementById("teamName").value.trim();
   const contactNumber = document.getElementById("contact").value.trim();
+  const hasFee = (t.entryFee || 0) > 0;
+  const upiTxnId = hasFee ? document.getElementById("upiTxnId").value.trim() : "";
+  if (hasFee && !upiTxnId) { showError("Enter your UPI transaction ID so we can confirm payment."); return; }
   const players = [];
   for (let i = 1; i <= size; i++) {
     const name = document.getElementById(`p${i}name`).value.trim();
@@ -107,6 +139,7 @@ async function submit(e, t, size) {
         teamName, contactNumber, players,
         slotNumber: (data.slotsFilled || 0) + 1,
         paymentStatus: data.entryFee ? "pending" : "not_required",
+        upiTxnId: upiTxnId || null,
         registeredAt: serverTimestamp()
       });
       tx.update(tRef, { slotsFilled: newFilled });
@@ -115,7 +148,7 @@ async function submit(e, t, size) {
     root.innerHTML = `
       <div class="success-box">
         <h3 style="color:var(--zone);">You're in.</h3>
-        <p style="color:var(--zone);opacity:0.85;">Your slot is booked for <strong>${escapeHtml(t.name)}</strong>. Room ID and password will appear on the tournament page shortly before start — save the link below.</p>
+        <p style="color:var(--zone);opacity:0.85;">Your slot is booked for <strong>${escapeHtml(t.name)}</strong>. ${hasFee ? "We'll confirm your payment shortly using the transaction ID you provided. " : ""}Room ID and password will appear on the tournament page shortly before start — save the link below.</p>
       </div>
       <p style="margin-top:1rem;"><a href="tournament.html?id=${t.id}">← Back to tournament page</a></p>
     `;
